@@ -1,5 +1,6 @@
 using ProjectRenamer.Models;
 using System.IO;
+using System.Text;
 
 namespace ProjectRenamer.Services
 {
@@ -29,7 +30,7 @@ namespace ProjectRenamer.Services
             }
             GetDirectories(settings.Path);
         }
-            
+
         private void GetDirectories(string path)
         {
             string[] files = Directory.GetFiles(path);
@@ -40,17 +41,26 @@ namespace ProjectRenamer.Services
                 {
                     if (typesToRead.Any(x => fileName.Contains(x)))
                     {
-                        string fileContent = File.ReadAllText(filePath);
+                        Encoding encoding;
+                        string fileContent;
+                        using (var reader = new StreamReader(filePath, true))
+                        {
+                            fileContent = reader.ReadToEnd();
+                            encoding = reader.CurrentEncoding;
+                        }
                         fileContent = fileContent.Replace(oldWord, newWord);
-                        File.WriteAllText(filePath, fileContent);
+
+                        using var writer = new StreamWriter(filePath, false, encoding);
+                        writer.Write(fileContent);
                     }
+
                     if (fileName.Contains(oldWord))
                     {
                         var newName = fileName.Replace(oldWord, newWord);
-                        File.Move(filePath, Path.Combine(path, Path.Combine(path, newName)));
+                        File.Move(filePath, Path.Combine(path, newName));
                     }
                 }
-                catch 
+                catch
                 {
                     throw new InvalidOperationException($"Error while processing file {fileName} in {path}.");
                 }
@@ -73,5 +83,6 @@ namespace ProjectRenamer.Services
                 Directory.Move(path, newPath);
             }
         }
+
     }
 }
